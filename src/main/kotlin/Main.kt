@@ -1,3 +1,4 @@
+import kotlin.random.Random
 /* fun main() {
     println("ИГРА КАМЕНЬ-НОЖНИЦЫ-БУМАГА")
     println("Ходы:")
@@ -90,152 +91,156 @@ fun getWinReason(winnerChoice: Int, loserChoice: Int): String {
         winnerChoice == 3 && loserChoice == 1 -> "Бумага оборачивает камень"
         else -> ""
     }
-} */
+}
 import kotlin.random.Random
 
 fun main() {
-    println("=== БИГРАММНЫЙ ШИФР ПОРТЫ ===")
 
-    // Запрос исходных данных
     print("Введите сообщение для шифрования: ")
-    val message = readLine()?.uppercase() ?: ""
+    val input = readln().trim()
 
-    print("Введите вспомогательный символ: ")
-    val fillerChar = readLine()?.uppercase()?.firstOrNull() ?: 'Я'
+    print("Введите вспомогательный символ (для нечётной длины, например, 'Я'): ")
+    var filler = readln().trim().uppercase().firstOrNull() ?: 'Я'
 
-    print("Использовать типовую таблицу? (да/нет): ")
-    val useStandardTable = readLine()?.equals("да", ignoreCase = true) ?: true
+    val alphabet = "АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+    if (filler !in alphabet) {
+        println("Символ '$filler' не в алфавите. Меняю на 'Я'")
+        filler = 'Я'
+    }
 
-    // Создание таблицы
-    val table = if (useStandardTable) createStandardTable() else createRandomTable()
+    var tip: Boolean? = null
+    while (tip == null) {
+        print("Использовать типовую таблицу? (да/нет): ")
+        val rawAnswer = readln().trim().lowercase()
 
-    // Шифрование
-    val encrypted = encryptMessage(message, fillerChar, table)
+        when (rawAnswer) {
+            "да" -> tip = true
+            "нет" -> tip = false
+            else -> {
+                println("Ошибка")
+            }
+        }
+    }
 
-    // Вывод результатов
-    printResults(message, encrypted, table)
+    val cleaned = cleanMessage(input, alphabet)
+    var message = cleaned
+    if (message.length % 2 != 0) {
+        message += filler
+        println("Длина сообщения нечётная → добавлен символ '$filler'")
+    }
+
+    val pairs = mutableListOf<Pair<Char, Char>>()
+    for (i in 0 until message.length step 2) {
+        pairs.add(Pair(message[i], message[i + 1]))
+    }
+
+    val cipherTable: Map<Pair<Char, Char>, String>
+    if (tip) {
+        cipherTable = StandardTable(alphabet)
+        println("Используется типовая таблица")
+    } else {
+        cipherTable = RandomTable(alphabet)
+        println("Сгенерирована случайная таблица")
+    }
+
+    val encrypt = mutableListOf<String>()
+    for (pair in pairs) {
+        val code = cipherTable[pair]
+        if (code == null) {
+            println("Ошибка: нет кода для пары $pair")
+            return
+        }
+        encrypt.add(code)
+    }
+
+    println("\n")
+    println("Исходное сообщение:")
+    val pairsStr = pairs.joinToString(" ") { "${it.first}${it.second}" }
+    println(pairsStr)
+
+    println("\nЗашифрованное сообщение:")
+    val numbersStr = encrypt.joinToString(" ")
+    println(numbersStr)
+
+
+
+    println("\nРасшифровка:")
+    val decryptedC = mutableListOf<Char>()
+    for (code in encrypt) {
+        val pair = cipherTable.entries.firstOrNull { it.value == code }?.key
+        if (pair != null) {
+            decryptedC.add(pair.first)
+            decryptedC.add(pair.second)
+        } else {
+            decryptedC.add('?')
+            decryptedC.add('?')
+        }
+    }
+    var decrypted = decryptedC.joinToString("")
+    if (decrypted.lastOrNull() == filler && cleaned.length % 2 != 0) {
+        decrypted = decrypted.dropLast(1)
+    }
+    println("→ $decrypted")
 }
 
-// Русский алфавит (33 буквы)
-val alphabet = "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ"
+fun cleanMessage(text: String, alphabet: String): String {
+    return text.uppercase()
+        .replace('Ё', 'Е')
+        .replace('Й', 'И')
+        .filter { it in alphabet }
+}
 
-data class BigramTable(val table: Map<Pair<Char, Char>, String>)
-
-fun createStandardTable(): BigramTable {
+fun StandardTable(alphabet: String): Map<Pair<Char, Char>, String> {
     val table = mutableMapOf<Pair<Char, Char>, String>()
     var counter = 1
-
-    for (i in alphabet.indices) {
-        for (j in alphabet.indices) {
-            val pair = Pair(alphabet[i], alphabet[j])
-            table[pair] = counter.toString().padStart(3, '0')
+    for (row in alphabet) {
+        for (col in alphabet) {
+            val code = "%03d".format(counter)
+            table[Pair(row, col)] = code
             counter++
         }
     }
-    return BigramTable(table)
+    return table
 }
 
-fun createRandomTable(): BigramTable {
-    val numbers = (1..999).shuffled()
+fun RandomTable(alphabet: String): Map<Pair<Char, Char>, String> {
+    val total = alphabet.length * alphabet.length // 961
+    val numbers = (1..total).shuffled(Random(42)) 
     val table = mutableMapOf<Pair<Char, Char>, String>()
     var index = 0
-
-    for (i in alphabet.indices) {
-        for (j in alphabet.indices) {
-            val pair = Pair(alphabet[i], alphabet[j])
-            table[pair] = numbers[index].toString().padStart(3, '0')
+    for (row in alphabet) {
+        for (col in alphabet) {
+            val code = "%03d".format(numbers[index])
+            table[Pair(row, col)] = code
             index++
         }
     }
-    return BigramTable(table)
-}
+    return table
+}*/
 
-fun encryptMessage(message: String, fillerChar: Char, table: BigramTable): String {
-    // Очистка сообщения (оставляем только буквы алфавита)
-    val cleanMessage = message.filter { it in alphabet }
 
-    // Разбивка на пары с добавлением fillerChar при необходимости
-    val pairs = mutableListOf<Pair<Char, Char>>()
-    var i = 0
+const val alphabet= "АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЭЮЯ"
+fun main(){
+    print("Введите исходное сообщение ")
+    val mess = readln().uppercase()
 
-    while (i < cleanMessage.length) {
-        val first = cleanMessage[i]
-        val second = if (i + 1 < cleanMessage.length) cleanMessage[i + 1] else fillerChar
-        pairs.add(Pair(first, second))
-        i += 2
+    print("Введите ключ ")
+    val key = readln().uppercase()
+    if(key.isEmpty()){
+        println("Ключ не может быть пустым")
+        return
     }
 
-    // Шифрование пар
-    return pairs.joinToString(" ") { pair ->
-        table.table[pair] ?: "000"
-    }
-}
+    print("Использовать типовую таблицу? (y/n) ")
+    val standart = readln().lowercase()
 
-fun printResults(originalMessage: String, encryptedMessage: String, table: BigramTable) {
-    println("\n" + "=".repeat(50))
-    println("РЕЗУЛЬТАТЫ ШИФРОВАНИЯ")
-    println("=".repeat(50))
-
-    // Очистка оригинального сообщения
-    val cleanMessage = originalMessage.filter { it in alphabet }
-
-    // Разбивка на пары для отображения
-    val pairs = mutableListOf<String>()
-    var i = 0
-    while (i < cleanMessage.length) {
-        val pair = if (i + 1 < cleanMessage.length) {
-            "${cleanMessage[i]}${cleanMessage[i + 1]}"
-        } else {
-            "${cleanMessage[i]}*"
-        }
-        pairs.add(pair)
-        i += 2
-    }
-
-    println("Исходное сообщение: ${pairs.joinToString(" ")}")
-    println("Зашифрованное сообщение: $encryptedMessage")
-
-    // Выравнивание для визуального сопоставления
-    println("\nСопоставление:")
-    val encryptedParts = encryptedMessage.split(" ")
-    for (j in pairs.indices) {
-        println("${pairs[j].padEnd(6)} -> ${encryptedParts.getOrElse(j) { "   " }}")
-    }
-
-    // Вывод части таблицы (первые 5x5 для примера)
-    println("\n" + "=".repeat(30))
-    println("ЧАСТЬ ТАБЛИЦЫ ШИФРОВАНИЯ (5x5)")
-    println("=".repeat(30))
-
-    print("    ")
-    for (j in 0..4) {
-        print("${alphabet[j]}   ")
-    }
-    println()
-
-    for (i in 0..4) {
-        print("${alphabet[i]} | ")
-        for (j in 0..4) {
-            val pair = Pair(alphabet[i], alphabet[j])
-            print("${table.table[pair]} ")
-        }
-        println()
-    }
-    println("...")
-}
-
-// Функция для дешифрования (дополнительно)
-fun decryptMessage(encryptedMessage: String, table: BigramTable): String {
-    val reverseTable = table.table.entries.associate { (key, value) -> value to key }
-    val encryptedParts = encryptedMessage.split(" ").filter { it.isNotBlank() }
-
-    val result = StringBuilder()
-    for (part in encryptedParts) {
-        val pair = reverseTable[part]
-        if (pair != null) {
-            result.append(pair.first)
-            result.append(pair.second)
+    val useStandart = when(standart) {
+        "y", "yes", "д", "да" -> true
+        "n", "no", "н", "нет" -> false
+        else -> {
+            println("Неизвестный ответ. Введите (да/нет)")
+            true
         }
     }
-    return result.toString()
+
 }
